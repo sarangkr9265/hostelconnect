@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f7fb">
+  <title>HostelConnect — Smart Hostel Management</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="login-screen" class="login-screen">
+    <section class="login-card">
+      <div class="brand brand-login"><span class="brand-mark">H</span><span>Hostel<span class="brand-light">Connect</span></span></div>
+      <p class="eyebrow">YOUR HOSTEL, IN SYNC</p>
+      <h1>Welcome back</h1>
+      <p class="muted">Sign in to manage your hostel, all in one place.</p>
+      <form id="login-form">
+        <label for="email">Email address</label>
+        <input id="email" type="email" placeholder="you@example.com" required autocomplete="username">
+        <label for="password">Password</label>
+        <div class="password-wrap"><input id="password" type="password" placeholder="Enter your password" required autocomplete="current-password"><button type="button" class="text-button" id="toggle-password">Show</button></div>
+        <p class="login-error" id="login-error" role="alert"></p>
+        <button class="button button-primary button-full" type="submit">Sign in <span aria-hidden="true">→</span></button>
+      </form>
+      <div class="demo-credentials"><strong>Try the demo</strong><p>Student: student@hostelconnect.demo<br>Warden: warden@hostelconnect.demo</p><p>Password for both: <code>hostel123</code></p><button class="text-button" id="fill-student">Use student login</button><span class="separator">·</span><button class="text-button" id="fill-warden">Use warden login</button></div>
+      <p class="login-foot">Frontend demo · Data stays in this browser</p>
+    </section>
+  </div>
+
+  <div id="app" class="app hidden">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand"><span class="brand-mark">H</span><span>Hostel<span class="brand-light">Connect</span></span></div>
+      <div class="workspace-label">WORKSPACE</div>
+      <nav id="navigation" aria-label="Main navigation"></nav>
+      <div class="sidebar-bottom"><div class="help-card"><span class="help-icon">✦</span><strong>Need a hand?</strong><p>Your hostel team is here to help.</p><button class="text-button" data-page="complaints">Contact support →</button></div><div class="sidebar-version">HOSTELCONNECT <span>DEMO</span></div></div>
+    </aside>
+    <main class="main-area">
+      <header class="topbar"><button id="mobile-menu" class="icon-button mobile-menu" aria-label="Open menu">☰</button><div class="breadcrumbs"><span>Workspace</span><span class="crumb-chevron">/</span><strong id="page-crumb">Overview</strong></div><div class="topbar-actions"><button class="icon-button notification-button" aria-label="Notifications" title="Announcements">♧<i></i></button><div class="topbar-divider"></div><button class="profile-button" id="profile-button"><span class="avatar" id="top-avatar">A</span><span class="profile-copy"><strong id="top-name">Alex Morgan</strong><small id="top-role">Student</small></span><span class="chevron">⌄</span></button><div id="profile-menu" class="profile-menu hidden"><button id="logout-button">Sign out</button></div></div></header>
+      <div class="content" id="page-content"></div>
+    </main>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="modal-root"></div>
+  <script src="app.js"></script>
+</body>
+</html>
