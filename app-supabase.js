@@ -5,11 +5,13 @@
   const icons = { overview:'⌂', rooms:'▦', leaves:'↗', complaints:'◉', announcements:'▤', people:'♙' };
   let db, authUser, profile, page='overview', data={ rooms:[], leaves:[], complaints:[], announcements:[], profiles:[] }, toastTimer;
   const $ = id => document.getElementById(id);
-  const themeChoices = ['blue','violet','teal'];
+  const themeChoices = ['blue','violet','teal','dark','rose','emerald','sunset','slate','berry'];
   function applyTheme(theme, persist=true){
     const selected=themeChoices.includes(theme)?theme:'blue';
     if(selected==='blue')document.documentElement.removeAttribute('data-theme');
     else document.documentElement.dataset.theme=selected;
+    const themeMeta=document.querySelector('meta[name="theme-color"]');
+    if(themeMeta)themeMeta.content=selected==='dark'?'#111827':'#f6f7fb';
     if(persist){try{localStorage.setItem('hostelconnect-theme',selected);}catch{}}
     const picker=$('theme-select'); if(picker)picker.value=selected;
   }

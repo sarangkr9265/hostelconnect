@@ -69,3 +69,7 @@ Profile pictures use a private Supabase Storage bucket. Before users upload a pi
 3. In HostelConnect, sign in, open the account menu at the top right, and choose **Upload or change photo**.
 
 The site accepts JPG, PNG, and WebP images up to 3 MB. A user can replace or remove their own picture. Storage policies keep each user’s picture private to that account.
+
+## Color themes
+
+Open your account menu and choose a theme. The selection is saved in your browser. Available options include Ocean blue, Violet, Teal, Dark mode, Rose, Emerald, Sunset, Slate, and Berry.
