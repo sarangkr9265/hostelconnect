@@ -81,3 +81,7 @@ Hostel staff can add a fee for a student, record its amount and due date, and ma
 ## Library records
 
 Students can record a book they borrow and mark it returned; hostel staff can see and update records for all students. The same supabase/setup-fees-library.sql setup file creates the fee and library tables and access rules. Run its complete contents in Supabase SQL Editor after these changes are pushed.
+
+## Dark color choices
+
+Open the account menu and choose Dark · Midnight, Ocean, Forest, Plum, Rose, or Amber. In dark mode, use the color picker to choose a custom accent. Each dark theme remembers its own custom accent on this browser.

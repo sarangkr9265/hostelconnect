@@ -5,13 +5,33 @@
   const icons = { overview:'⌂', rooms:'▦', leaves:'↗', complaints:'◉', announcements:'▤', fees:'₹', library:'▤', people:'♙' };
   let db, authUser, profile, page='overview', data={ rooms:[], leaves:[], complaints:[], announcements:[], profiles:[], fees:[], feesReady:false, libraryLoans:[], libraryReady:false }, toastTimer;
   const $ = id => document.getElementById(id);
-  const themeChoices = ['blue','violet','teal','dark','rose','emerald','sunset','slate','berry'];
+  const themeChoices = ['blue','violet','teal','dark','dark-ocean','dark-forest','dark-plum','dark-rose','dark-amber','rose','emerald','sunset','slate','berry'];
+  const darkAccentDefaults = {dark:'#8aaeff','dark-ocean':'#38bdf8','dark-forest':'#34d399','dark-plum':'#c084fc','dark-rose':'#fb7185','dark-amber':'#fbbf24'};
+  function applyDarkAccent(color,persist=true){
+    const root=document.documentElement;
+    root.style.setProperty('--blue',color);
+    root.style.setProperty('--blue-hover',`color-mix(in srgb, ${color} 78%, white)`);
+    root.style.setProperty('--blue-light',`color-mix(in srgb, ${color} 22%, #1b2636)`);
+    root.style.setProperty('--blue-ring',`color-mix(in srgb, ${color} 28%, transparent)`);
+    root.style.setProperty('--purple',color);
+    root.style.setProperty('--purple-light',`color-mix(in srgb, ${color} 20%, #1b2636)`);
+    if(persist){try{localStorage.setItem(`hostelconnect-dark-accent-${$('theme-select')?.value||'dark'}`,color);}catch{}}
+  }
   function applyTheme(theme, persist=true){
     const selected=themeChoices.includes(theme)?theme:'blue';
     if(selected==='blue')document.documentElement.removeAttribute('data-theme');
     else document.documentElement.dataset.theme=selected;
+    const isDark=selected.startsWith('dark'); let activeAccent='#8aaeff';
+    const accentPicker=$('dark-accent-picker'),accentSetting=$('dark-accent-setting');
+    if(isDark){
+      activeAccent=darkAccentDefaults[selected];
+      try{activeAccent=localStorage.getItem(`hostelconnect-dark-accent-${selected}`)||activeAccent;}catch{}
+      applyDarkAccent(activeAccent,false);
+    }else ['--blue','--blue-hover','--blue-light','--blue-ring','--purple','--purple-light'].forEach(name=>document.documentElement.style.removeProperty(name));
+    if(accentPicker)accentPicker.value=activeAccent;
+    if(accentSetting)accentSetting.classList.toggle('hidden',!isDark);
     const themeMeta=document.querySelector('meta[name="theme-color"]');
-    if(themeMeta)themeMeta.content=selected==='dark'?'#111827':'#f6f7fb';
+    if(themeMeta)themeMeta.content=isDark?'#111827':'#f6f7fb';
     if(persist){try{localStorage.setItem('hostelconnect-theme',selected);}catch{}}
     const picker=$('theme-select'); if(picker)picker.value=selected;
   }
@@ -222,6 +242,7 @@
       e.currentTarget.setAttribute('aria-expanded',String(open));
     });
     $('theme-select').addEventListener('change',e=>applyTheme(e.currentTarget.value));
+    $('dark-accent-picker').addEventListener('input',e=>applyDarkAccent(e.currentTarget.value));
     $('profile-photo-input').addEventListener('change',async e=>{
       await uploadProfilePhoto(e.currentTarget.files?.[0]);
       e.currentTarget.value='';
