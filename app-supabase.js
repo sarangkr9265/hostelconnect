@@ -5,6 +5,15 @@
   const icons = { overview:'⌂', rooms:'▦', leaves:'↗', complaints:'◉', announcements:'▤', people:'♙' };
   let db, authUser, profile, page='overview', data={ rooms:[], leaves:[], complaints:[], announcements:[], profiles:[] }, toastTimer;
   const $ = id => document.getElementById(id);
+  const themeChoices = ['blue','violet','teal'];
+  function applyTheme(theme, persist=true){
+    const selected=themeChoices.includes(theme)?theme:'blue';
+    if(selected==='blue')document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.dataset.theme=selected;
+    if(persist){try{localStorage.setItem('hostelconnect-theme',selected);}catch{}}
+    const picker=$('theme-select'); if(picker)picker.value=selected;
+  }
+  function loadTheme(){let saved='blue';try{saved=localStorage.getItem('hostelconnect-theme')||'blue';}catch{}applyTheme(saved,false);}
   const staff = () => ['warden','admin'].includes(profile?.role);
   const admin = () => profile?.role === 'admin';
   const esc = value => String(value ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -135,7 +144,11 @@
     $('login-form').addEventListener('submit',async e=>{e.preventDefault();if(!db){$('login-error').textContent='Add the Supabase URL and publishable key to supabase-config.js first.';return;}await signIn($('email').value,$('password').value);});
     $('toggle-password').addEventListener('click',e=>{const p=$('password');p.type=p.type==='password'?'text':'password';e.currentTarget.textContent=p.type==='password'?'Show':'Hide';});
     $('logout-button').addEventListener('click',signOut);
-    $('profile-button').addEventListener('click',()=>$('profile-menu').classList.toggle('hidden'));
+    $('profile-button').addEventListener('click',e=>{
+      const menu=$('profile-menu'),open=menu.classList.toggle('hidden')===false;
+      e.currentTarget.setAttribute('aria-expanded',String(open));
+    });
+    $('theme-select').addEventListener('change',e=>applyTheme(e.currentTarget.value));
     $('mobile-menu').addEventListener('click',()=>{$('sidebar').classList.add('open');$('mobile-overlay').classList.add('show');});
     document.addEventListener('click',e=>{const nav=e.target.closest('[data-page]');if(nav){page=nav.dataset.page;$('sidebar').classList.remove('open');$('mobile-overlay').classList.remove('show');renderShell();renderPage();return;}const a=e.target.closest('[data-action]');if(a){handleAction(a.dataset.action,a);return;}});
     document.addEventListener('submit',e=>{if(e.target.matches('form[data-form]')){e.preventDefault();submitForm(e.target);}});
@@ -146,6 +159,7 @@
   function filterComplaints(){const term=($('complaint-search')?.value||'').toLowerCase(),status=$('complaint-filter')?.value||'all';$('complaint-rows').innerHTML=complaintRows(data.complaints.filter(x=>(`${x.subject} ${x.category} ${personName(x.user_id)}`.toLowerCase().includes(term))&&(status==='all'||x.status===status)));}
   function filterPeople(){const term=($('people-search')?.value||'').toLowerCase();const rows=data.profiles.filter(p=>`${p.full_name} ${p.email} ${p.student_id} ${p.room_number}`.toLowerCase().includes(term));const tbody=document.querySelector('#page-content tbody');if(tbody)tbody.innerHTML=rows.map(p=>`<tr><td>${esc(p.full_name||'—')}</td><td>${esc(p.email||'—')}</td><td>${esc(p.student_id||'—')}</td><td>${esc(p.room_number||'—')}</td><td>${statusBadge(p.role)}</td><td><button class="table-action" data-action="edit-person" data-id="${p.id}">Edit details</button></td></tr>`).join('')||'<tr><td colspan="6" class="empty-state">No profiles found.</td></tr>';}
   async function start(){
+    loadTheme();
     $('app').insertAdjacentHTML('beforeend','<div class="mobile-overlay" id="mobile-overlay"></div>');bind();
     if(!window.supabase?.createClient){showLogin('Could not load the Supabase client library. Check your internet connection and refresh.');return;}
     if(!config.url||config.url.includes('PASTE_')||!config.publishableKey||config.publishableKey.includes('PASTE_')){showLogin('Add the Project URL and Publishable key to supabase-config.js, then refresh this page.');return;}
