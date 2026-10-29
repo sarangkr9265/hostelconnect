@@ -38,6 +38,13 @@
 :root[data-theme^="dark"] .status.borrowed{background:var(--amber-light);color:var(--amber)}
 .status.returned{background:var(--green-light);color:var(--green)}
 .status.borrowed{background:var(--amber-light);color:var(--amber)}
+:root[data-theme^="dark"] .profile-menu{max-height:calc(100vh - 78px);overflow-y:auto}
+.wallpaper-setting{padding:8px 9px 10px;border-bottom:1px solid var(--line)}
+.wallpaper-note{display:block;margin-top:5px;color:var(--muted);font-size:9px;line-height:1.4}
+body.wallpaper-active{background-color:var(--bg);background-image:linear-gradient(rgba(245,248,255,.82),rgba(245,248,255,.82)),var(--wallpaper-image);background-position:center;background-repeat:no-repeat;background-size:cover;background-attachment:fixed}
+body.wallpaper-active .login-screen{background-image:linear-gradient(rgba(245,248,255,.78),rgba(245,248,255,.78)),var(--wallpaper-image);background-position:center;background-repeat:no-repeat;background-size:cover;background-attachment:fixed}
+:root[data-theme^="dark"] body.wallpaper-active{background-image:linear-gradient(rgba(17,24,39,.82),rgba(17,24,39,.82)),var(--wallpaper-image)}
+:root[data-theme^="dark"] body.wallpaper-active .login-screen{background-image:linear-gradient(rgba(17,24,39,.78),rgba(17,24,39,.78)),var(--wallpaper-image)}
 :root[data-theme="dark-ocean"]{--blue:#38bdf8;--purple:#38bdf8;--purple-light:#17344a}
 :root[data-theme="dark-forest"]{--blue:#34d399;--purple:#34d399;--purple-light:#173b32}
 :root[data-theme="dark-plum"]{--blue:#c084fc;--purple:#c084fc;--purple-light:#39284c}

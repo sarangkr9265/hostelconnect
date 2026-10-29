@@ -44,8 +44,52 @@
   const date = value => value ? new Date(value+'T12:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}) : '—';
   const statusBadge = value => `<span class="status ${esc(String(value||'').toLowerCase().replaceAll('_','-').replaceAll(' ','-'))}">${esc(nice(value))}</span>`;
   function notify(message){ const el=$('toast'); el.textContent=message; el.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove('show'),3200); }
-  function showLogin(message='') { authUser=null; profile=null; $('app').classList.add('hidden'); $('login-screen').classList.remove('hidden'); $('login-error').textContent=message; }
+  function showLogin(message='') { applyWallpaper(); authUser=null; profile=null; $('app').classList.add('hidden'); $('login-screen').classList.remove('hidden'); $('login-error').textContent=message; }
   function showApp(){ $('login-screen').classList.add('hidden'); $('app').classList.remove('hidden'); }
+  function applyWallpaper(imageData=''){
+    if(imageData)document.documentElement.style.setProperty('--wallpaper-image',`url("${imageData}")`);
+    else document.documentElement.style.removeProperty('--wallpaper-image');
+    document.body.classList.toggle('wallpaper-active',Boolean(imageData));
+    $('remove-wallpaper')?.classList.toggle('hidden',!imageData);
+  }
+  function loadWallpaper(){
+    try{applyWallpaper(localStorage.getItem(`hostelconnect-wallpaper-${authUser.id}`)||'');}
+    catch{applyWallpaper('');}
+  }
+  async function compressWallpaper(file){
+    const bitmap=await createImageBitmap(file);
+    const scale=Math.min(1,1600/bitmap.width,1200/bitmap.height);
+    const canvas=document.createElement('canvas');
+    canvas.width=Math.max(1,Math.round(bitmap.width*scale));
+    canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+    canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);
+    bitmap.close?.();
+    const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/webp',0.78));
+    if(!blob)throw new Error('The image could not be processed.');
+    return await new Promise((resolve,reject)=>{
+      const reader=new FileReader();
+      reader.onload=()=>resolve(reader.result);
+      reader.onerror=()=>reject(new Error('The image could not be read.'));
+      reader.readAsDataURL(blob);
+    });
+  }
+  async function uploadWallpaper(file){
+    if(!file)return;
+    if(!['image/jpeg','image/png','image/webp'].includes(file.type)){notify('Choose a JPG, PNG, or WebP image.');return;}
+    if(file.size>8*1024*1024){notify('Choose an image smaller than 8 MB.');return;}
+    try{
+      const imageData=await compressWallpaper(file);
+      localStorage.setItem(`hostelconnect-wallpaper-${authUser.id}`,imageData);
+      applyWallpaper(imageData);
+      notify('Website wallpaper updated for this browser.');
+    }catch(error){notify(error?.name==='QuotaExceededError'?'Your browser storage is full. Remove the current wallpaper and try a smaller image.':error.message||'Could not save this wallpaper.');}
+  }
+  function removeWallpaper(){
+    if(!confirm('Remove your website wallpaper?'))return;
+    try{localStorage.removeItem(`hostelconnect-wallpaper-${authUser.id}`);}catch{}
+    applyWallpaper();
+    notify('Website wallpaper removed.');
+  }
   function friendlyError(error){
     const msg=error?.message||'Please try again.';
     if(/Invalid login credentials/i.test(msg)) return 'Email or password is incorrect.';
@@ -105,6 +149,7 @@
     const {data:row,error}=await db.from('profiles').select('*').eq('id',user.id).single();
     if(error||!row){await db.auth.signOut();showLogin(`Your account was found, but its HostelConnect profile could not be loaded. ${error?friendlyError(error):'Ask the administrator to check your profile.'}`);return;}
     profile=row; showApp();
+    loadWallpaper();
     $('top-name').textContent=profile.full_name||user.email;
     $('top-role').textContent=nice(profile.role);
     showInitialAvatar();
@@ -248,6 +293,11 @@
       e.currentTarget.value='';
     });
     $('remove-profile-photo').addEventListener('click',removeProfilePhoto);
+    $('wallpaper-input').addEventListener('change',async e=>{
+      await uploadWallpaper(e.currentTarget.files?.[0]);
+      e.currentTarget.value='';
+    });
+    $('remove-wallpaper').addEventListener('click',removeWallpaper);
     $('mobile-menu').addEventListener('click',()=>{$('sidebar').classList.add('open');$('mobile-overlay').classList.add('show');});
     document.addEventListener('click',e=>{const nav=e.target.closest('[data-page]');if(nav){page=nav.dataset.page;$('sidebar').classList.remove('open');$('mobile-overlay').classList.remove('show');renderShell();renderPage();return;}const a=e.target.closest('[data-action]');if(a){handleAction(a.dataset.action,a);return;}});
     document.addEventListener('submit',e=>{if(e.target.matches('form[data-form]')){e.preventDefault();submitForm(e.target);}});

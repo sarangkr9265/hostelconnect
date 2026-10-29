@@ -85,3 +85,7 @@ Students can record a book they borrow and mark it returned; hostel staff can se
 ## Dark color choices
 
 Open the account menu and choose Dark · Midnight, Ocean, Forest, Plum, Rose, or Amber. In dark mode, use the color picker to choose a custom accent. Each dark theme remembers its own custom accent on this browser.
+
+## Personal wallpaper
+
+Open the account menu, choose Upload wallpaper, and select a JPG, PNG, or WebP image up to 8 MB. The app resizes the image and saves it in this browser for the signed-in account. It does not upload wallpapers to Supabase, so they do not follow the user to another device or browser. Use Remove wallpaper to clear it.
