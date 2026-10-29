@@ -59,3 +59,13 @@ git push
 3. In `app.js`, explore the `seed` object to see the example rooms and requests.
 4. Try the student and warden accounts and make a change in each role.
 5. Push the finished version to GitHub using the commands above.
+
+## Profile pictures
+
+Profile pictures use a private Supabase Storage bucket. Before users upload a picture:
+
+1. Open Supabase **SQL Editor**.
+2. Open `supabase/setup-profile-photos.sql` from this project, copy its full contents, paste them into the SQL Editor, and click **Run** once.
+3. In HostelConnect, sign in, open the account menu at the top right, and choose **Upload or change photo**.
+
+The site accepts JPG, PNG, and WebP images up to 3 MB. A user can replace or remove their own picture. Storage policies keep each user’s picture private to that account.

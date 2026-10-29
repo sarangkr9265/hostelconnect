@@ -31,6 +31,46 @@
     if(/permission|row-level|RLS|schema cache|not found/i.test(msg)) return `${msg} Check that the database setup completed and access rules are enabled.`;
     return msg;
   }
+  function profilePhotoError(error){
+    const msg=error?.message||'';
+    if(/bucket|row-level|permission|policy|not found/i.test(msg)) return 'Profile photo storage is not set up yet. Run supabase/setup-profile-photos.sql in the Supabase SQL Editor, then try again.';
+    return friendlyError(error);
+  }
+  function showInitialAvatar(){
+    const avatar=$('top-avatar');
+    avatar.classList.remove('has-photo');
+    avatar.textContent=initials(profile?.full_name||authUser?.email||'?');
+    $('remove-profile-photo').classList.add('hidden');
+  }
+  async function loadProfilePhoto(){
+    showInitialAvatar();
+    const {data:photo,error}=await db.storage.from('profile-photos').createSignedUrl(`${authUser.id}/avatar`,3600);
+    if(error||!photo?.signedUrl)return;
+    const image=document.createElement('img');
+    image.className='avatar-photo';
+    image.alt=`${profile?.full_name||'User'} profile picture`;
+    image.src=`${photo.signedUrl}&updated=${Date.now()}`;
+    image.addEventListener('error',showInitialAvatar,{once:true});
+    $('top-avatar').replaceChildren(image);
+    $('top-avatar').classList.add('has-photo');
+    $('remove-profile-photo').classList.remove('hidden');
+  }
+  async function uploadProfilePhoto(file){
+    if(!file)return;
+    if(!['image/jpeg','image/png','image/webp'].includes(file.type)){notify('Choose a JPG, PNG, or WebP image.');return;}
+    if(file.size>3*1024*1024){notify('Choose an image smaller than 3 MB.');return;}
+    const {error}=await db.storage.from('profile-photos').upload(`${authUser.id}/avatar`,file,{upsert:true,contentType:file.type,cacheControl:'3600'});
+    if(error){notify(profilePhotoError(error));return;}
+    await loadProfilePhoto();
+    notify('Profile picture updated.');
+  }
+  async function removeProfilePhoto(){
+    if(!confirm('Remove your profile picture?'))return;
+    const {error}=await db.storage.from('profile-photos').remove([`${authUser.id}/avatar`]);
+    if(error){notify(profilePhotoError(error));return;}
+    showInitialAvatar();
+    notify('Profile picture removed.');
+  }
   async function signIn(email,password){
     $('login-error').textContent='';
     const {data:result,error}=await db.auth.signInWithPassword({email:email.trim(),password});
@@ -45,7 +85,8 @@
     profile=row; showApp();
     $('top-name').textContent=profile.full_name||user.email;
     $('top-role').textContent=nice(profile.role);
-    $('top-avatar').textContent=initials(profile.full_name||user.email);
+    showInitialAvatar();
+    await loadProfilePhoto();
     await loadData();
   }
   async function loadData(){
@@ -149,6 +190,11 @@
       e.currentTarget.setAttribute('aria-expanded',String(open));
     });
     $('theme-select').addEventListener('change',e=>applyTheme(e.currentTarget.value));
+    $('profile-photo-input').addEventListener('change',async e=>{
+      await uploadProfilePhoto(e.currentTarget.files?.[0]);
+      e.currentTarget.value='';
+    });
+    $('remove-profile-photo').addEventListener('click',removeProfilePhoto);
     $('mobile-menu').addEventListener('click',()=>{$('sidebar').classList.add('open');$('mobile-overlay').classList.add('show');});
     document.addEventListener('click',e=>{const nav=e.target.closest('[data-page]');if(nav){page=nav.dataset.page;$('sidebar').classList.remove('open');$('mobile-overlay').classList.remove('show');renderShell();renderPage();return;}const a=e.target.closest('[data-action]');if(a){handleAction(a.dataset.action,a);return;}});
     document.addEventListener('submit',e=>{if(e.target.matches('form[data-form]')){e.preventDefault();submitForm(e.target);}});
