@@ -73,3 +73,7 @@ The site accepts JPG, PNG, and WebP images up to 3 MB. A user can replace or rem
 ## Color themes
 
 Open your account menu and choose a theme. The selection is saved in your browser. Available options include Ocean blue, Violet, Teal, Dark mode, Rose, Emerald, Sunset, Slate, and Berry.
+
+## Hostel and gym fees
+
+Hostel staff can add a fee for a student, record its amount and due date, and mark it paid. Students can see their own fee records. Before using the Fees section, copy and run supabase/setup-fees-library.sql in the Supabase SQL Editor.
