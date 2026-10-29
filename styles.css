@@ -34,3 +34,7 @@
 :root[data-theme="dark"] .demo-credentials{background:#202c3e;border-color:var(--line);color:#c1cada}
 :root[data-theme="dark"] .demo-credentials strong,:root[data-theme="dark"] .field label{color:var(--ink)}
 :root[data-theme="dark"] .profile-menu button{color:var(--red)}
+:root[data-theme="dark"] .status.returned{background:var(--green-light);color:var(--green)}
+:root[data-theme="dark"] .status.borrowed{background:var(--amber-light);color:var(--amber)}
+.status.returned{background:var(--green-light);color:var(--green)}
+.status.borrowed{background:var(--amber-light);color:var(--amber)}

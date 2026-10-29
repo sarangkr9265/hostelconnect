@@ -1,9 +1,9 @@
 (() => {
   'use strict';
   const config = window.HOSTELCONNECT_CONFIG || {};
-  const pageNames = { overview:'Overview', rooms:'Room management', leaves:'Leave requests', complaints:'Complaints', announcements:'Announcements', fees:'Fees', people:'Student records' };
-  const icons = { overview:'⌂', rooms:'▦', leaves:'↗', complaints:'◉', announcements:'▤', fees:'₹', people:'♙' };
-  let db, authUser, profile, page='overview', data={ rooms:[], leaves:[], complaints:[], announcements:[], profiles:[], fees:[], feesReady:false }, toastTimer;
+  const pageNames = { overview:'Overview', rooms:'Room management', leaves:'Leave requests', complaints:'Complaints', announcements:'Announcements', fees:'Fees', library:'Library', people:'Student records' };
+  const icons = { overview:'⌂', rooms:'▦', leaves:'↗', complaints:'◉', announcements:'▤', fees:'₹', library:'▤', people:'♙' };
+  let db, authUser, profile, page='overview', data={ rooms:[], leaves:[], complaints:[], announcements:[], profiles:[], fees:[], feesReady:false, libraryLoans:[], libraryReady:false }, toastTimer;
   const $ = id => document.getElementById(id);
   const themeChoices = ['blue','violet','teal','dark','rose','emerald','sunset','slate','berry'];
   function applyTheme(theme, persist=true){
@@ -98,7 +98,8 @@
       db.from('complaints').select('*').order('created_at',{ascending:false}),
       db.from('announcements').select('*').order('created_at',{ascending:false}),
       db.from('profiles').select('*').order('full_name'),
-      db.from('fees').select('*').order('created_at',{ascending:false})
+      db.from('fees').select('*').order('created_at',{ascending:false}),
+      db.from('library_loans').select('*').order('borrowed_at',{ascending:false})
     ];
     const results=await Promise.all(requests);
     const failed=results.slice(0,5).find(x=>x.error);
@@ -106,17 +107,19 @@
     [data.rooms,data.leaves,data.complaints,data.announcements,data.profiles]=results.map(x=>x.data||[]);
     data.fees=results[5]?.error?[]:results[5].data||[];
     data.feesReady=!results[5]?.error;
+    data.libraryLoans=results[6]?.error?[]:results[6].data||[];
+    data.libraryReady=!results[6]?.error;
     renderShell(); renderPage();
   }
   function renderShell(){
-    const pages=['overview','rooms','leaves','complaints','announcements','fees']; if(admin()) pages.push('people');
+    const pages=['overview','rooms','leaves','complaints','announcements','fees','library']; if(admin()) pages.push('people');
     $('navigation').innerHTML=pages.map(p=>`<button class="nav-item ${p===page?'active':''}" data-page="${p}"><span class="nav-icon">${icons[p]}</span>${pageNames[p]}${p==='leaves'&&staff()?`<span class="nav-badge">${data.leaves.filter(x=>x.status==='pending').length||''}</span>`:''}</button>`).join('');
   }
   function heading(title,sub,action=''){return `<div class="page-heading"><div><h1>${title}</h1><p>${sub}</p></div>${action?`<div class="heading-actions">${action}</div>`:''}</div>`;}
   function addButton(label,action){return `<button class="button button-primary button-small" data-action="${action}">＋ &nbsp;${label}</button>`;}
   function stat(label,value,note,icon,color){return `<div class="stat-card"><div class="stat-top"><span>${label}</span><span class="stat-icon ${color}">${icon}</span></div><div class="stat-value">${value}</div><div class="stat-foot">${note}</div></div>`;}
   function personName(id){return data.profiles.find(p=>p.id===id)?.full_name||'Resident';}
-  function renderPage(){const f={overview:renderOverview,rooms:renderRooms,leaves:renderLeaves,complaints:renderComplaints,announcements:renderAnnouncements,fees:renderFees,people:renderPeople}[page]||renderOverview;$('page-crumb').textContent=pageNames[page]||'Overview';$('page-content').innerHTML=f();}
+  function renderPage(){const f={overview:renderOverview,rooms:renderRooms,leaves:renderLeaves,complaints:renderComplaints,announcements:renderAnnouncements,fees:renderFees,library:renderLibrary,people:renderPeople}[page]||renderOverview;$('page-crumb').textContent=pageNames[page]||'Overview';$('page-content').innerHTML=f();}
   function renderOverview(){
     const capacity=data.rooms.reduce((n,r)=>n+Number(r.capacity||0),0); const occupied=data.rooms.reduce((n,r)=>n+data.profiles.filter(p=>p.room_number===r.room_number).length,0); const pct=capacity?Math.round(occupied/capacity*100):0; const openLeaves=data.leaves.filter(x=>x.status==='pending').length; const openComplaints=data.complaints.filter(x=>!['resolved','closed'].includes(x.status)).length;
     const leaveRows=(staff()?data.leaves:data.leaves.filter(x=>x.user_id===authUser.id)).slice(0,4);
@@ -146,12 +149,22 @@
     const action=staff()?addButton('Add fee','new-fee'):'';
     return `${heading('Fees',staff()?'Record hostel and gym charges and update payment status.':'View your hostel and gym fee records.',action)}<div class="callout">Fee records are managed by hostel staff. Students can view their own fees here.</div><div class="panel data-panel"><div class="table-wrap"><table class="data-table"><thead><tr>${staff()?'<th>STUDENT</th>':''}<th>FEE</th><th>AMOUNT</th><th>DUE DATE</th><th>STATUS</th>${staff()?'<th>UPDATE</th>':''}</tr></thead><tbody>${rows.map(f=>`<tr>${staff()?`<td>${esc(personName(f.student_id))}</td>`:''}<td><strong>${esc(nice(f.fee_type))}</strong>${f.description?`<br><small>${esc(f.description)}</small>`:''}</td><td>${new Intl.NumberFormat('en-IN',{style:'currency',currency:'INR'}).format(Number(f.amount))}</td><td>${date(f.due_date)}</td><td>${statusBadge(f.status)}</td>${staff()?`<td><button class="table-action" data-action="fee-status" data-id="${esc(f.id)}" data-status="${f.status==='paid'?'pending':'paid'}">Mark ${f.status==='paid'?'pending':'paid'}</button></td>`:''}</tr>`).join('')||`<tr><td colspan="${staff()?6:4}" class="empty-state">No fee records yet.</td></tr>`}</tbody></table></div></div>`;
   }
+  function renderLibrary(){
+    if(!data.libraryReady)return `${heading('Library','Track books borrowed by hostel residents.') }<div class="callout">Set up the library table before using this section. Run <strong>supabase/setup-fees-library.sql</strong> in the Supabase SQL Editor.</div>`;
+    const rows=staff()?data.libraryLoans:data.libraryLoans.filter(book=>book.student_id===authUser.id);
+    return `${heading('Library',staff()?'Track borrowed books and returns across the hostel.':'Record borrowed books and keep your returns up to date.',addButton('Record a borrowed book','new-library-loan'))}<div class="panel data-panel"><div class="table-wrap"><table class="data-table"><thead><tr>${staff()?'<th>STUDENT</th>':''}<th>BOOK</th><th>AUTHOR</th><th>BOOK ID</th><th>TAKEN</th><th>DUE</th><th>STATUS</th><th>ACTION</th></tr></thead><tbody>${rows.map(book=>`<tr>${staff()?`<td>${esc(personName(book.student_id))}</td>`:''}<td><strong>${esc(book.book_title)}</strong></td><td>${esc(book.author||'—')}</td><td>${esc(book.book_code||'—')}</td><td>${date(book.borrowed_at)}</td><td>${date(book.due_date)}</td><td>${statusBadge(book.returned_at?'returned':'borrowed')}</td><td>${book.returned_at?'<span class="panel-subtitle">Returned</span>':`<button class="table-action" data-action="library-return" data-id="${esc(book.id)}">Mark returned</button>`}</td></tr>`).join('')||`<tr><td colspan="${staff()?8:7}" class="empty-state">No library records yet.</td></tr>`}</tbody></table></div></div>`;
+  }
   function renderPeople(){if(!admin())return '<div class="panel empty-state">Admin access required.</div>';return `${heading('Student records','Invite users, view profiles, and update details or roles.',addButton('Invite user','new-user'))}<div class="callout">Invited users receive an email link to set their own password. Passwords are private and cannot be viewed here. Supabase email delivery must be configured to invite external addresses.</div><div class="toolbar"><div class="search-box"><input id="people-search" placeholder="Search students…"></div></div><div class="panel data-panel"><div class="table-wrap"><table class="data-table"><thead><tr><th>NAME</th><th>EMAIL</th><th>STUDENT ID</th><th>ROOM</th><th>ROLE</th><th>EDIT</th></tr></thead><tbody>${data.profiles.map(p=>`<tr><td>${esc(p.full_name||'—')}</td><td>${esc(p.email||'—')}</td><td>${esc(p.student_id||'—')}</td><td>${esc(p.room_number||'—')}</td><td>${statusBadge(p.role)}</td><td><button class="table-action" data-action="edit-person" data-id="${p.id}">Edit details</button></td></tr>`).join('')||'<tr><td colspan="6" class="empty-state">No profiles found.</td></tr>'}</tbody></table></div></div>`;}
   function openModal(title,html){$('modal-root').innerHTML=`<div class="modal-backdrop" data-action="backdrop"><section class="modal" role="dialog" aria-modal="true"><div class="modal-head"><h2>${title}</h2><button class="modal-close" data-action="close-modal">×</button></div>${html}</section></div>`;}
   function input(label,name,type='text',value='',required=true){return `<div class="field"><label for="f-${name}">${label}${required?' *':''}</label><input id="f-${name}" name="${name}" type="${type}" value="${esc(value)}" ${required?'required':''}></div>`;}
   function formButtons(label){return `<div class="form-actions"><button class="button button-primary">${label}</button><button type="button" class="button button-secondary" data-action="close-modal">Cancel</button></div>`;}
   function showForm(kind,id){
     const room=data.rooms.find(x=>x.id===id), person=data.profiles.find(x=>x.id===id);
+    if(kind==='new-library-loan'){
+      const studentField=staff()?`<div class="field full"><label for="library-student">Student *</label><select id="library-student" name="student_id" required>${data.profiles.filter(p=>p.role==='student').map(p=>`<option value="${esc(p.id)}">${esc(p.full_name||p.email)}</option>`).join('')}</select></div>`:'';
+      openModal('Record a borrowed book',`<form data-form="library-loan"><div class="form-grid">${studentField}${input('Book title','book_title')}${input('Author','author','text','',false)}${input('Book ID or ISBN','book_code','text','',false)}${input('Due date','due_date','date','',false)}</div>${formButtons('Save book record')}</form>`);
+      return;
+    }
     if(kind==='new-fee'&&staff())openModal('Add a fee',`<form data-form="fee"><div class="form-grid"><div class="field full"><label for="fee-student">Student *</label><select id="fee-student" name="student_id" required>${data.profiles.filter(p=>p.role==='student').map(p=>`<option value="${esc(p.id)}">${esc(p.full_name||p.email)}${p.student_id?` · ${esc(p.student_id)}`:''}</option>`).join('')}</select></div><div class="field"><label for="fee-type">Fee type *</label><select id="fee-type" name="fee_type"><option value="hostel">Hostel fee</option><option value="gym">Gym fee</option></select></div>${input('Amount (INR)','amount','number','',true).replace('type="number"','type="number" min="0.01" step="0.01"')} ${input('Due date','due_date','date','',false)}<div class="field full"><label for="fee-description">Details</label><textarea id="fee-description" name="description" maxlength="250" placeholder="Optional note about this charge"></textarea></div></div>${formButtons('Save fee')}</form>`);
     if(kind==='new-user'&&admin())openModal('Invite a user',`<form data-form="new-user"><div class="callout">Supabase will email an invitation to this address. The user sets their own password from the link.</div><div class="form-grid">${input('Full name','full_name')}${input('Email address','email','email')}${input('Student ID','student_id','text','',false)}${input('Phone','phone','tel','',false)}${input('Room number','room_number','text','',false)}<div class="field"><label>Role</label><select name="role"><option value="student">Student</option><option value="warden">Warden</option></select></div></div>${formButtons('Send invitation')}</form>`);
     if(kind==='new-leave')openModal('Request leave',`<form data-form="leave"><div class="form-grid">${input('Start date','start_date','date')}${input('Return date','end_date','date')}${input('Destination','destination')}${input('Reason','reason')}</div>${formButtons('Submit request')}</form>`);
@@ -176,6 +189,8 @@
     } else if(form.dataset.form==='fee'){
       if(!staff()){notify('Only hostel staff can add fees.');return;}
       result=await db.from('fees').insert({student_id:v.student_id,fee_type:v.fee_type,amount:Number(v.amount),due_date:v.due_date||null,description:v.description||null,created_by:authUser.id});
+    } else if(form.dataset.form==='library-loan'){
+      result=await db.from('library_loans').insert({student_id:staff()?v.student_id:authUser.id,book_title:v.book_title,author:v.author||null,book_code:v.book_code||null,due_date:v.due_date||null,created_by:authUser.id});
     } else if(form.dataset.form==='complaint') result=await db.from('complaints').insert({user_id:authUser.id,category:v.category,subject:v.subject,description:v.description});
     else if(form.dataset.form==='announcement') result=await db.from('announcements').insert({title:v.title,category:v.category,body:v.body,author_id:authUser.id});
     else if(form.dataset.form==='room') result=await db.from('rooms').insert({room_number:v.room_number,building:v.building,floor:Number(v.floor),capacity:Number(v.capacity),status:v.status});
@@ -186,13 +201,14 @@
   }
   async function handleAction(kind,el){
     const id=el.dataset.id;
-    if(['new-leave','new-complaint','new-announcement','new-room','edit-room','edit-person','new-user','new-fee'].includes(kind)){showForm(kind,id);return;}
+    if(['new-leave','new-complaint','new-announcement','new-room','edit-room','edit-person','new-user','new-fee','new-library-loan'].includes(kind)){showForm(kind,id);return;}
     if(kind==='close-modal'){ $('modal-root').innerHTML='';return; }
     if(kind==='backdrop'&&el.target===el){ $('modal-root').innerHTML='';return; }
     let result;
     if(kind==='leave-status')result=await db.from('leave_requests').update({status:el.dataset.status,reviewed_by:authUser.id}).eq('id',id);
     if(kind==='complaint-status')result=await db.from('complaints').update({status:el.value}).eq('id',id);
     if(kind==='fee-status'&&staff())result=await db.from('fees').update({status:el.dataset.status,paid_at:el.dataset.status==='paid'?new Date().toISOString():null}).eq('id',id);
+    if(kind==='library-return')result=await db.from('library_loans').update({returned_at:new Date().toISOString()}).eq('id',id).is('returned_at',null);
     if(kind==='delete-room'){if(!confirm('Remove this room?'))return;result=await db.from('rooms').delete().eq('id',id);}
     if(kind==='delete-announcement'){if(!confirm('Remove this announcement?'))return;result=await db.from('announcements').delete().eq('id',id);}
     if(result?.error)notify(friendlyError(result.error));else if(result){notify('Updated successfully.');await loadData();}

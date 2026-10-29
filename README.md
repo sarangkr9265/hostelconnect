@@ -77,3 +77,7 @@ Open your account menu and choose a theme. The selection is saved in your browse
 ## Hostel and gym fees
 
 Hostel staff can add a fee for a student, record its amount and due date, and mark it paid. Students can see their own fee records. Before using the Fees section, copy and run supabase/setup-fees-library.sql in the Supabase SQL Editor.
+
+## Library records
+
+Students can record a book they borrow and mark it returned; hostel staff can see and update records for all students. The same supabase/setup-fees-library.sql setup file creates the fee and library tables and access rules. Run its complete contents in Supabase SQL Editor after these changes are pushed.

@@ -37,3 +37,40 @@ using ((select public.is_hostel_staff()))
 with check ((select public.is_hostel_staff()));
 
 grant select, insert, update on public.fees to authenticated;
+
+create table if not exists public.library_loans (
+  id uuid primary key default gen_random_uuid(),
+  student_id uuid not null references public.profiles(id) on delete cascade,
+  book_title text not null,
+  author text,
+  book_code text,
+  borrowed_at date not null default current_date,
+  due_date date,
+  returned_at timestamptz,
+  created_by uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists library_loans_student_borrowed_idx
+  on public.library_loans (student_id, borrowed_at desc);
+
+alter table public.library_loans enable row level security;
+
+drop policy if exists "library_loans_read_own_or_staff" on public.library_loans;
+drop policy if exists "library_loans_insert_own_or_staff" on public.library_loans;
+drop policy if exists "library_loans_update_own_or_staff" on public.library_loans;
+
+create policy "library_loans_read_own_or_staff"
+on public.library_loans for select to authenticated
+using (student_id = (select auth.uid()) or (select public.is_hostel_staff()));
+
+create policy "library_loans_insert_own_or_staff"
+on public.library_loans for insert to authenticated
+with check (student_id = (select auth.uid()) or (select public.is_hostel_staff()));
+
+create policy "library_loans_update_own_or_staff"
+on public.library_loans for update to authenticated
+using (student_id = (select auth.uid()) or (select public.is_hostel_staff()))
+with check (student_id = (select auth.uid()) or (select public.is_hostel_staff()));
+
+grant select, insert, update on public.library_loans to authenticated;
